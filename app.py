@@ -1,7 +1,7 @@
 import streamlit as st
-import rasterio
 import numpy as np
 import matplotlib.pyplot as plt
+import tifffile as tiff
 import tempfile
 
 # -----------------------------
@@ -29,9 +29,18 @@ mode = st.radio(
 # FUNCTIONS
 # -----------------------------
 def load_green_nir(path):
-    with rasterio.open(path) as src:
-        green = src.read(1).astype("float32")
-        nir = src.read(2).astype("float32")
+    """
+    Load Green and NIR bands from Sentinel TIFF using tifffile
+    Expected shape: (bands, height, width)
+    """
+    img = tiff.imread(path)
+
+    if img.ndim != 3 or img.shape[0] < 2:
+        raise ValueError("Invalid Sentinel TIFF format")
+
+    green = img[0].astype("float32")
+    nir = img[1].astype("float32")
+
     return green, nir
 
 def compute_ndwi(green, nir):
@@ -48,7 +57,7 @@ def analyze_glof(img1, img2):
     mask_t1 = ndwi_t1 > threshold
     mask_t2 = ndwi_t2 > threshold
 
-    pixel_area = 10 * 10
+    pixel_area = 10 * 10  # Sentinel-2 resolution
     area_t1 = mask_t1.sum() * pixel_area / 1e6
     area_t2 = mask_t2.sum() * pixel_area / 1e6
 
@@ -144,4 +153,3 @@ if st.button("🚨 Run GLOF Early Warning Analysis"):
         )
     else:
         st.info("LOW RISK – Normal monitoring recommended.")
-# paste the FULL Streamlit code I gave you here
